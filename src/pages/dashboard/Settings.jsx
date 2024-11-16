@@ -88,7 +88,7 @@ export function Settings() {
             transition={{ delay: 0.6 }}
           >
             <p className="text-sm text-gray-400">
-              To update your profile information, please use the Clerk user settings.
+              You can't update your name or email address here.
             </p>
           </motion.div>
         </div>

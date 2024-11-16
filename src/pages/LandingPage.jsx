@@ -13,7 +13,7 @@ export function LandingPage() {
       <nav className="container mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Bot className="w-8 h-8 text-blue-500" />
-          <span className="text-xl font-bold">BoltAI</span>
+          <span className="text-xl font-bold">ScriptGenie</span>
         </div>
         <div className="hidden md:flex space-x-8">
           <a href="#features" className="hover:text-blue-400 transition-colors">Features</a>
@@ -115,7 +115,7 @@ export function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <Bot className="w-6 h-6 text-blue-500" />
-              <span className="font-bold">BoltAI</span>
+              <span className="font-bold">ScriptGenie</span>
             </div>
             <div className="flex space-x-6 text-sm text-gray-400">
               <a href="#" className="hover:text-white transition-colors">Privacy</a>

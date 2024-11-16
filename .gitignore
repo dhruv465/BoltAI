@@ -12,7 +12,11 @@ dist
 dist-ssr
 *.local
 *.env
+<<<<<<< HEAD
 
+=======
+*.bolt
+>>>>>>> 7385d55 (Remove unused Bolt configuration and prompt files; update .gitignore to exclude .bolt directory)
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

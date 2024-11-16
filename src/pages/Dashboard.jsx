@@ -37,7 +37,7 @@ export const Dashboard = () => {
                 className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
               >
                 <Bot className="w-6 h-6 text-blue-500" />
-                <span className="font-bold text-lg">BoltAI</span>
+                <span className="font-bold text-lg">ScriptGenie</span>
               </Link>
 
               {/* Navigation Links */}

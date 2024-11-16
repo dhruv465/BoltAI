@@ -72,7 +72,7 @@ const Login = () => {
             </div>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            BoltAI
+            ScriptGenie
           </h1>
           <p className="text-sm text-muted-foreground">
             Welcome back

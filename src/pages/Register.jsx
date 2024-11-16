@@ -40,7 +40,7 @@ export function Register() {
         <div className="flex justify-center mb-8">
           <Link to="/" className="flex items-center space-x-2">
             <Bot className="w-8 h-8 text-blue-500" />
-            <span className="text-xl font-bold text-white">BoltAI</span>
+            <span className="text-xl font-bold text-white">ScriptGenie</span>
           </Link>
         </div>
         

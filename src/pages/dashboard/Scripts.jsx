@@ -5,6 +5,46 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateResponse } from '../../lib/gemini';
 import { DeleteConfirmDialog } from '../../components/DeleteConfirmDialog';
 
+// Storage constants and utilities
+const STORAGE_KEYS = {
+  SCRIPTS: 'scripts_data',
+  CHAT_HISTORIES: 'chat_histories'
+};
+
+const getFromStorage = (key) => {
+  try {
+    const data = localStorage.getItem(key);
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading from storage:', error);
+    return null;
+  }
+};
+
+const saveToStorage = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error saving to storage:', error);
+  }
+};
+
+const cleanOldChats = (histories) => {
+  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+  const cleaned = {};
+  
+  Object.entries(histories).forEach(([scriptId, messages]) => {
+    cleaned[scriptId] = messages.filter(msg => {
+      const timestamp = msg.timestamp || Date.now();
+      return timestamp > oneDayAgo;
+    });
+  });
+  
+  return cleaned;
+};
+
+// Message component
 function ChatMessage({ message }) {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
@@ -34,33 +74,48 @@ function ChatMessage({ message }) {
   );
 }
 
-function AutoResizingInput({ value, onChange, maxLength = 40, ...props }) {
-  const measureWidth = (text) => {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    context.font = '16px sans-serif'; // Match your input's font
-    return context.measureText(text).width + 32; // Add padding
-  };
-
-  const width = value ? Math.min(Math.max(100, measureWidth(value)), 300) : 100;
+// Script name input component
+function ScriptNameInput({ value, onChange, onBlur, ...props }) {
+  const [localValue, setLocalValue] = useState(value);
+  
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
 
   return (
     <input
       type="text"
-      value={value}
-      onChange={onChange}
-      style={{ width: `${width}px` }}
-      maxLength={maxLength}
+      value={localValue}
+      onChange={(e) => {
+        setLocalValue(e.target.value);
+        e.stopPropagation();
+      }}
+      onBlur={(e) => {
+        if (onChange) {
+          onChange(localValue);
+        }
+        if (onBlur) {
+          onBlur(e);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.target.blur();
+        }
+        e.stopPropagation();
+      }}
+      onClick={(e) => e.stopPropagation()}
+      className="bg-transparent font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg px-2 py-1 transition-all w-full max-w-[200px]"
       {...props}
     />
   );
 }
 
+// Chat component
 function Chat({ script, chatHistory, setChatHistory }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update last accessed timestamp whenever chat is opened or message is sent
   useEffect(() => {
     script.lastAccessed = Date.now();
   }, []);
@@ -69,19 +124,29 @@ function Chat({ script, chatHistory, setChatHistory }) {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage = input.trim();
+    const userMessage = {
+      role: 'user',
+      content: input.trim(),
+      timestamp: Date.now()
+    };
+
     setInput('');
-    setChatHistory(script.id, prev => [...prev, { role: 'user', content: userMessage }]);
+    setChatHistory(script.id, prev => [...prev, userMessage]);
     setIsLoading(true);
     script.lastAccessed = Date.now();
 
     try {
-      const response = await generateResponse(userMessage);
-      setChatHistory(script.id, prev => [...prev, { role: 'assistant', content: response }]);
+      const response = await generateResponse(userMessage.content);
+      setChatHistory(script.id, prev => [...prev, {
+        role: 'assistant',
+        content: response,
+        timestamp: Date.now()
+      }]);
     } catch (error) {
       setChatHistory(script.id, prev => [...prev, { 
         role: 'error', 
-        content: 'Sorry, there was an error generating the response.' 
+        content: 'Sorry, there was an error generating the response.',
+        timestamp: Date.now()
       }]);
     } finally {
       setIsLoading(false);
@@ -147,24 +212,54 @@ function Chat({ script, chatHistory, setChatHistory }) {
   );
 }
 
+// Main Scripts List component
 function ScriptsList() {
-  const [scripts, setScripts] = useState([
-    { 
-      id: '1', 
-      name: 'Customer Support',
-      lastAccessed: Date.now() 
-    },
-    { 
-      id: '2', 
-      name: 'Product Expert',
-      lastAccessed: Date.now() - 3600000 
-    },
-  ]);
+  const [scripts, setScripts] = useState(() => {
+    const saved = getFromStorage(STORAGE_KEYS.SCRIPTS) || [
+      { 
+        id: '1', 
+        name: 'Customer Support',
+        lastAccessed: Date.now() 
+      },
+      { 
+        id: '2', 
+        name: 'Product Expert',
+        lastAccessed: Date.now() - 3600000 
+      },
+    ];
+    return saved;
+  });
+
+  const [chatHistories, setChatHistories] = useState(() => {
+    const saved = getFromStorage(STORAGE_KEYS.CHAT_HISTORIES) || {};
+    return cleanOldChats(saved);
+  });
+
   const [activeScript, setActiveScript] = useState(null);
-  const [chatHistories, setChatHistories] = useState({});
   const [deleteDialog, setDeleteDialog] = useState({ open: false, script: null });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [view, setView] = useState('all'); // 'all' or 'recent'
+
+  // Storage effects
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.SCRIPTS, scripts);
+  }, [scripts]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.CHAT_HISTORIES, chatHistories);
+  }, [chatHistories]);
+
+  // Cleanup effect
+  useEffect(() => {
+    const cleanup = () => {
+      setChatHistories(prev => cleanOldChats(prev));
+    };
+
+    const interval = setInterval(cleanup, 60 * 60 * 1000);
+    cleanup();
+
+    return () => clearInterval(interval);
+  }, []);
 
   const addScript = () => {
     const newScript = {
@@ -203,13 +298,21 @@ function ScriptsList() {
     }));
   };
 
-  // Get recent scripts (accessed in the last 24 hours)
+  const handleScriptNameChange = (scriptId, newName) => {
+    const updated = scripts.map(s =>
+      s.id === scriptId ? { ...s, name: newName } : s
+    );
+    setScripts(updated);
+  };
+
+  // Get recent scripts
   const recentScripts = scripts
     .filter(script => Date.now() - script.lastAccessed < 24 * 60 * 60 * 1000)
     .sort((a, b) => b.lastAccessed - a.lastAccessed);
 
   const displayedScripts = view === 'recent' ? recentScripts : scripts;
 
+  // Sidebar component
   const Sidebar = () => (
     <div className="space-y-4">
       <div className="flex space-x-2 mb-6">
@@ -259,16 +362,10 @@ function ScriptsList() {
           >
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <AutoResizingInput
+                <ScriptNameInput
                   value={script.name}
-                  onChange={(e) => {
-                    const updated = scripts.map(s =>
-                      s.id === script.id ? { ...s, name: e.target.value } : s
-                    );
-                    setScripts(updated);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-transparent font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg px-2 py-1 transition-all"
+                  onChange={(newName) => handleScriptNameChange(script.id, newName)}
+                  maxLength={40}
                 />
                 <motion.button
                   onClick={(e) => {
@@ -357,6 +454,7 @@ function ScriptsList() {
             </motion.div>
           )}
         </AnimatePresence>
+
 
         {/* Main Content */}
         <div className="md:col-span-8">

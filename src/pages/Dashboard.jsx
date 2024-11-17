@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Bot, LogOut, Settings, Layout, MessageSquare } from 'lucide-react';
+import { Bot, LogOut, Settings, Layout, MessageSquare, Menu, X } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { Scripts } from './dashboard/Scripts';
 import { Settings as SettingsPage } from './dashboard/Settings';
@@ -9,6 +9,7 @@ export const Dashboard = () => {
   const { user } = useUser();
   const { signOut } = useClerk();
   const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isActive = (path) => {
     return (
@@ -40,7 +41,7 @@ export const Dashboard = () => {
                 <span className="font-bold text-lg">ScriptGenie</span>
               </Link>
 
-              {/* Navigation Links */}
+              {/* Desktop Navigation Links */}
               <div className="hidden sm:flex ml-10 items-center space-x-1">
                 <Link to="/dashboard" className={navLinkClass('/dashboard')}>
                   <Layout className="w-5 h-5" />
@@ -65,9 +66,6 @@ export const Dashboard = () => {
                   alt={user?.firstName || 'User'}
                   className="w-8 h-8 rounded-full"
                 />
-                {/* <span className="text-sm text-gray-300">
-                  {user?.primaryEmailAddress?.emailAddress}
-                </span> */}
               </div>
               <button
                 onClick={() => signOut()}
@@ -76,8 +74,45 @@ export const Dashboard = () => {
               >
                 <LogOut className="w-5 h-5" />
               </button>
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="sm:hidden p-2 text-gray-300 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors"
+              >
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
           </div>
+
+          {/* Mobile Navigation Menu */}
+          {isMenuOpen && (
+            <div className="sm:hidden pb-4 space-y-1">
+              <Link 
+                to="/dashboard" 
+                className={navLinkClass('/dashboard')}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Layout className="w-5 h-5" />
+                <span>Dashboard</span>
+              </Link>
+              <Link 
+                to="/dashboard/scripts" 
+                className={navLinkClass('/dashboard/scripts')}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Scripts</span>
+              </Link>
+              <Link 
+                to="/dashboard/settings" 
+                className={navLinkClass('/dashboard/settings')}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Settings className="w-5 h-5" />
+                <span>Settings</span>
+              </Link>
+            </div>
+          )}
         </div>
       </nav>
 
